@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agitaf · Prevención de lesiones en básquetbol</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<style>
+:root{--bg:#070c1a;--card:#0d1426;--bd:#1c2640;--tx:#e8ecf5;--mut:#8a94ad;--ac:#3aa8ff;--or:#ff7a1a;--trk:#1c2640;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--bd:#dde2ee;--tx:#0b1226;--mut:#5b6580;--ac:#0b6fd0;--or:#e8590c;--trk:#e3e8f2}
+html,body{background:var(--bg)}body{background-image:radial-gradient(60rem 30rem at 90% -10%,color-mix(in srgb,var(--or) 14%,transparent),transparent),radial-gradient(60rem 30rem at -10% 0,color-mix(in srgb,var(--ac) 16%,transparent),transparent);background-repeat:no-repeat}
+body{color:var(--tx);font-family:"Space Grotesk",system-ui,sans-serif;transition:background .5s}
+.serif{font-family:"Playfair Display",Georgia,serif}
+.card{background:var(--card);border:1px solid var(--bd)}
+.mut{color:var(--mut)}.ac{color:var(--ac)}
+.bgac{background:var(--ac)}.or{color:var(--or)}.bgor{background:var(--or)}.grad{background:linear-gradient(90deg,var(--ac),var(--or));-webkit-background-clip:text;background-clip:text;color:transparent}
+.riskbg{background:#450a0a!important}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const { useState, useEffect, useRef } = React;
+const html = htm.bind(React.createElement);
+
+const STAGES = {
+  'Calentamiento': { base: 28, alert: 'Sobrecarga detectada con el tejido aún frío. Reduce la intensidad de inmediato y retoma con movilidad progresiva durante 3–5 min.' },
+  'Entrenamiento Técnico': { base: 46, alert: 'Carga excesiva en trabajo técnico. Detén saltos y cambios de dirección, descansa 2 min y revisa la técnica de aterrizaje.' },
+  'Partido': { base: 68, alert: 'Riesgo crítico en competencia. Solicita cambio, hidrátate y descansa mínimo 5 min. Evaluación del cuerpo médico recomendada.' },
+  'Elongación': { base: 14, alert: 'Tensión muscular excesiva durante el estiramiento. Suspende la elongación: riesgo de microdesgarro. No fuerces el rango.' },
+};
+const TEAM = [
+  ['María Fernanda Muñoz', 'Prototipos análogos', 'Investiga prototipos análogos —dispositivos y soluciones similares que ya existen— para entender qué funciona, qué no y por qué. Su trabajo asegura que la cinta Agitaf sea cómoda de usar durante el juego y viable para el cliente, sin sacrificar la precisión de las mediciones.'],
+  ['José Manuel Valdés', 'Estudio de mercado', 'Analiza el mercado del deporte y la tecnología vestible: quiénes son los competidores, qué necesitan clubes, entrenadores y jugadores, y dónde hay oportunidades reales. Gracias a su estudio, Agitaf se plantea como una propuesta con sentido y no solo como una buena idea.'],
+  ['Benjamín Cano', 'Sensores', 'Investiga y compara los sensores de movimiento y actividad muscular disponibles, evaluando precisión, tamaño, consumo y compatibilidad con Arduino y Bluetooth. Es quien define con qué tecnología se mide el muslo y la canilla para detectar riesgos a tiempo.'],
+  ['Javier Barros', 'Encuestas', 'Diseña y aplica encuestas para conocer la realidad de jugadores y entrenadores: qué lesiones son más comunes, cómo se previenen hoy y qué esperarían de una herramienta como Agitaf. Convierte la experiencia de quienes viven el básquetbol en datos concretos para decidir.'],
+  ['Vicente Durán', 'Desarrollo web', 'Desarrollador web del proyecto. Recolecta los datos y requerimientos para construir este sitio web y conectar los dispositivos, y desarrolla la interfaz donde el entrenador ve los sensores en tiempo real y recibe las alertas de riesgo.'],
+];
+const N = 60;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function Hero({ eyebrow, l1, l2, desc }) {
+  return html`<section class="pt-16 pb-10">
+    <div class="w-20 h-0.5 mb-10" style=${{ background: 'linear-gradient(90deg,var(--ac),var(--or))' }}></div>
+    <p class="ac uppercase text-sm sm:text-base mb-6" style=${{ letterSpacing: '.28em' }}>${eyebrow}</p>
+    <h1 class="serif text-5xl sm:text-7xl leading-[1.05]">${l1}<br/><span class="grad">${l2}</span></h1>
+    <p class="mut text-lg sm:text-xl mt-6 max-w-2xl leading-relaxed">${desc}</p>
+  </section>`;
+}
+
+function Spark({ data, color }) {
+  const pts = data.map((v, i) => `${(i / (N - 1)) * 300},${100 - v}`).join(' ');
+  return html`<svg viewBox="0 0 300 100" preserveAspectRatio="none" class="w-full h-24">
+    ${[25, 50, 75].map(y => html`<line key=${y} x1="0" x2="300" y1=${y} y2=${y} stroke="var(--bd)" stroke-width="1"/>`)}
+    <line x1="0" x2="300" y1="15" y2="15" stroke="#ef4444" stroke-dasharray="4 4" stroke-width="1" opacity=".6"/>
+    <polyline points=${pts} fill="none" stroke=${color} stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
+function SensorCard({ title, sub, data, fatigue, risk }) {
+  const v = Math.round(data[data.length - 1] || 0);
+  const lvl = v >= 85 ? 'CRÍTICO' : v >= 65 ? 'ELEVADO' : 'NORMAL';
+  const col = v >= 85 ? '#ef4444' : v >= 65 ? '#ff7a1a' : '#3aa8ff';
+  return html`<div class=${'card rounded-xl p-5 ' + (risk ? '!border-red-500/70' : '')}>
+    <div class="flex items-start justify-between">
+      <div><h3 class="serif text-2xl">${title}</h3><p class="text-xs mut">${sub}</p></div>
+      <span class="text-xs font-semibold px-2 py-1 rounded-full" style=${{ background: col + '22', color: col }}>${lvl}</span>
+    </div>
+    <div class="flex items-end gap-2 mt-3"><span class="text-5xl font-semibold tabular-nums" style=${{ color: col }}>${v}</span><span class="mut mb-1">% activación</span></div>
+    <${Spark} data=${data} color=${col} />
+    <div class="mt-3">
+      <div class="flex justify-between text-xs mut mb-1"><span>Índice de fatiga</span><span>${Math.round(fatigue)}%</span></div>
+      <div class="h-1.5 rounded-full overflow-hidden" style=${{ background: 'var(--trk)' }}><div class="h-full rounded-full transition-all" style=${{ width: fatigue + '%', background: col }}></div></div>
+    </div>
+  </div>`;
+}
+
+function Alertas({ risk, setRisk }) {
+  const [conn, setConn] = useState('off');
+  const [stage, setStage] = useState('Calentamiento');
+  const [thigh, setThigh] = useState(Array(N).fill(0));
+  const [shin, setShin] = useState(Array(N).fill(0));
+  const [fat, setFat] = useState({ t: 0, s: 0 });
+  const [secs, setSecs] = useState(0);
+  const t = useRef(0);
+  const live = conn === 'on';
+
+  const connect = () => {
+    if (conn !== 'off') { setConn('off'); setRisk(false); return; }
+    setConn('connecting');
+    setTimeout(() => { setConn('on'); setSecs(0); setFat({ t: 0, s: 0 }); }, 1800);
+  };
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => {
+      t.current += 1;
+      const b = STAGES[stage].base;
+      const nT = clamp(b + (risk ? 30 : 0) + Math.sin(t.current / 5) * 9 + (Math.random() - .5) * 8, 3, 100);
+      const nS = clamp(b * .85 + (risk ? 24 : 0) + Math.sin(t.current / 4 + 1) * 8 + (Math.random() - .5) * (risk ? 16 : 8), 3, 100);
+      setThigh(d => [...d.slice(1), nT]);
+      setShin(d => [...d.slice(1), nS]);
+      setFat(f => ({ t: clamp(f.t + nT / 2500, 0, 100), s: clamp(f.s + nS / 2500, 0, 100) }));
+    }, 150);
+    const cl = setInterval(() => setSecs(s => s + 1), 1000);
+    return () => { clearInterval(id); clearInterval(cl); };
+  }, [live, stage, risk]);
+
+  const asym = Math.round(Math.abs(thigh[N - 1] - shin[N - 1]));
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0'), ss = String(secs % 60).padStart(2, '0');
+
+  return html`<div>
+    <${Hero} eyebrow="Monitor en tiempo real · Muslo y pantorrilla" l1="Alertas de" l2="Sobrecarga" desc="Conecta la cinta Agitaf, elige la etapa del jugador y monitorea la actividad muscular. Ante índices de riesgo, el entrenador recibe una alerta de descanso." />
+    <div class="space-y-5 pb-16">
+      <div class="flex flex-wrap items-center gap-3">
+        <button onClick=${connect} class=${'px-5 py-3 rounded-lg font-medium text-sm transition ' + (conn === 'on' ? 'card ac' : conn === 'connecting' ? 'card mut animate-pulse' : 'bgac text-white hover:opacity-90')}>
+          ${conn === 'on' ? '● Conectado · Desconectar' : conn === 'connecting' ? 'Buscando dispositivo…' : 'Conectar Agitaf (BLE)'}
+        </button>
+        ${live && html`<span class="text-xs mut">Agitaf-BLE-01 · Batería 87% · -52 dBm</span>`}
+      </div>
+
+      ${risk && html`<div class="rounded-xl bg-red-600 text-white p-5 shadow-[0_0_40px_rgba(239,68,68,.45)] animate-pulse">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold" style=${{ letterSpacing: '.25em' }}>⚠ ALERTA CRÍTICA · ${stage.toUpperCase()}</p>
+            <h2 class="serif text-3xl mt-2">Detener actividad y descansar</h2>
+            <p class="mt-2 text-red-50 max-w-2xl">${STAGES[stage].alert}</p>
+          </div>
+          <button onClick=${() => setRisk(false)} class="px-4 py-2 rounded-lg bg-white text-red-700 font-semibold text-sm">Reconocer alerta</button>
+        </div>
+      </div>`}
+
+      <div class="card rounded-xl p-4">
+        <p class="text-xs uppercase mut mb-3" style=${{ letterSpacing: '.25em' }}>Etapa deportiva</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${Object.keys(STAGES).map(s => html`<button key=${s} onClick=${() => setStage(s)} class=${'px-3 py-3 rounded-lg text-sm font-medium transition border ' + (stage === s ? 'bgor text-white border-transparent' : 'border-[color:var(--bd)] hover:opacity-80')}>${s}</button>`)}
+        </div>
+      </div>
+
+      ${!live ? html`<div class="rounded-xl border border-dashed p-10 text-center mut" style=${{ borderColor: 'var(--bd)' }}>Conecta la cinta Agitaf para comenzar a recibir datos de los sensores.</div>` : html`<div class="space-y-5">
+        <div class="grid md:grid-cols-2 gap-5">
+          <${SensorCard} title="Muslo" sub="Cuádriceps · sobre la rodilla" data=${thigh} fatigue=${fat.t} risk=${risk} />
+          <${SensorCard} title="Músculo inferior" sub="Canilla · bajo la rodilla" data=${shin} fatigue=${fat.s} risk=${risk} />
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          ${[['Asimetría', asym + '%'], ['Sesión', mm + ':' + ss], ['Estado', risk ? 'En riesgo' : 'Estable']].map(([l, v]) =>
+            html`<div key=${l} class="card rounded-xl p-4"><p class="text-xs mut">${l}</p><p class=${'text-2xl font-semibold mt-1 tabular-nums ' + (l === 'Estado' && risk ? 'text-red-400' : '')}>${v}</p></div>`)}
+        </div>
+      </div>`}
+
+      <div class="flex items-center gap-3">
+        <button disabled=${!live} onClick=${() => setRisk(!risk)} class=${'px-5 py-3 rounded-lg font-medium transition ' + (!live ? 'card mut cursor-not-allowed opacity-60' : risk ? 'card' : 'bg-red-600 hover:bg-red-500 text-white')}>
+          ${risk ? 'Detener simulación de riesgo' : 'Simular Riesgo'}
+        </button>
+        ${!live && html`<span class="text-xs mut">Requiere conexión activa.</span>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function Nosotros() {
+  const steps = [
+    ['01', 'Dos sensores', 'Una cinta con módulo Bluetooth (BLE) y dos sensores de movimiento: uno en el muslo, sobre la rodilla, y otro en la canilla, bajo la rodilla.'],
+    ['02', 'Lectura de índices', 'Los sensores miden la actividad muscular del jugador y la envían en tiempo real a este sitio web.'],
+    ['03', 'Alerta al entrenador', 'Cuando los índices indican riesgo de sobrecarga, Agitaf le avisa al entrenador que el basquetbolista puede lesionarse.'],
+  ];
+  return html`<div class="pb-16">
+    <${Hero} eyebrow="Quiénes somos · Qué es Agitaf" l1="Prevención de" l2="Lesiones en Básquet" desc="Agitaf es una solución web para la prevención de lesiones en el básquetbol, pensada como un aporte a la seguridad en el deporte." />
+    <div class="grid md:grid-cols-3 gap-5">
+      ${steps.map(([n, t, d]) => html`<div key=${n} class="card rounded-xl p-6"><p class="or text-sm font-semibold" style=${{ letterSpacing: '.25em' }}>${n}</p><h3 class="serif text-2xl mt-3">${t}</h3><p class="mut mt-3 leading-relaxed">${d}</p></div>`)}
+    </div>
+    <div class="card rounded-xl p-6 mt-5">
+      <h3 class="serif text-2xl">Para cada momento del jugador</h3>
+      <p class="mut mt-3 leading-relaxed max-w-3xl">Agitaf se puede usar en cualquier situación deportiva: calentamiento, entrenamiento técnico, partido y elongación. Las alertas se adaptan a la etapa para recomendar el descanso adecuado.</p>
+      <div class="flex flex-wrap gap-2 mt-4">${Object.keys(STAGES).map(s => html`<span key=${s} class="text-sm px-3 py-1 rounded-full border or" style=${{ borderColor: 'var(--bd)' }}>${s}</span>`)}</div>
+    </div>
+    <p class="mut mt-8 max-w-3xl leading-relaxed">Nuestro propósito se enmarca en un tema global: la seguridad en el deporte. Prevenir antes de lesionar, con datos.</p>
+  </div>`;
+}
+
+function Equipo() {
+  return html`<div class="pb-16">
+    <${Hero} eyebrow="El equipo detrás de Agitaf" l1="Conoce a" l2="Nuestro Equipo" desc="Cinco personas, cada una a cargo de un frente clave del proyecto." />
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      ${TEAM.map(([n, r, d]) => html`<div key=${n} class="card rounded-xl p-6">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center serif text-lg text-white" style=${{ background: 'linear-gradient(135deg,var(--ac),var(--or))' }}>${n.split(' ').filter((_, i, a) => i === 0 || i === a.length - 1).map(w => w[0]).join('')}</div>
+        <h3 class="serif text-2xl mt-4">${n}</h3>
+        <p class="or text-xs font-semibold uppercase mt-1" style=${{ letterSpacing: '.2em' }}>${r}</p>
+        <p class="mut mt-3 leading-relaxed">${d}</p>
+      </div>`)}
+    </div>
+  </div>`;
+}
+
+function App() {
+  const [tab, setTab] = useState('alertas');
+  const [theme, setTheme] = useState('dark');
+  const [risk, setRisk] = useState(false);
+  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
+  useEffect(() => { document.body.classList.toggle('riskbg', risk); }, [risk]);
+  const tabs = [['alertas', 'Alertas'], ['nosotros', 'Nosotros'], ['equipo', 'Equipo']];
+  return html`<div class="min-h-screen">
+    <div class="max-w-5xl mx-auto px-5">
+      <header class="flex flex-wrap items-center justify-between gap-3 py-6">
+        <button onClick=${() => setTab('alertas')} class="serif text-2xl">Agitaf<span class="or">.</span></button>
+        <nav class="flex items-center gap-5 sm:gap-8">
+          ${tabs.map(([k, l]) => html`<button key=${k} onClick=${() => setTab(k)} class=${'text-base sm:text-lg transition ' + (tab === k ? 'font-medium' : 'mut hover:opacity-80')}>${l}</button>`)}
+          <button onClick=${() => setTheme(theme === 'dark' ? 'light' : 'dark')} class="card rounded-md px-3 py-1.5 text-sm">${theme === 'dark' ? '☀ Modo claro' : '☾ Modo oscuro'}</button>
+        </nav>
+      </header>
+      ${tab === 'alertas' ? html`<${Alertas} risk=${risk} setRisk=${setRisk} />` : tab === 'nosotros' ? html`<${Nosotros} />` : html`<${Equipo} />`}
+      <footer class="text-center text-xs mut pb-8">Agitaf · Prototipo</footer>
+    </div>
+  </div>`;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
