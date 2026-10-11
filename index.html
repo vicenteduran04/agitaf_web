@@ -46,7 +46,7 @@ const TEAM = [
   ['José Manuel Valdés', 'Estudio de mercado', 'Analiza el mercado del deporte y la tecnología vestible: quiénes son los competidores, qué necesitan clubes, entrenadores y jugadores, y dónde hay oportunidades reales. Gracias a su estudio, AGITAF se plantea como una propuesta con sentido y no solo como una buena idea. Además, redacta el informe técnico, investiga la evidencia científica y programa las simulaciones del algoritmo.'],
   ['Benjamín Cano', 'Sensores', 'Investiga y compara los sensores de movimiento y actividad muscular disponibles, evaluando precisión, tamaño, consumo y compatibilidad con Arduino y Bluetooth. Es quien define con qué tecnología se mide el muslo y la pantorrilla para detectar riesgos a tiempo.'],
   ['Javier Barros', 'Encuestas', 'Diseña y aplica encuestas para conocer la realidad de jugadores y entrenadores: qué lesiones son más comunes, cómo se previenen hoy y qué esperarían de una herramienta como AGITAF. Convierte la experiencia de quienes viven el básquetbol en datos concretos para decidir.'],
-  ['Vicente Durán', 'Desarrollo web', 'Desarrollador web del proyecto. Recolecta los datos y requerimientos para construir este sitio web y conectar los dispositivos, y desarrolla la interfaz donde el entrenador ve los sensores en tiempo real y recibe las alertas de riesgo.'],
+  ['Vicente Durán', 'Desarrollo web', 'Desarrollador web del proyecto. Recolecta los datos y requerimientos para construir el sitio web y conectar los dispositivos, y desarrolla la interfaz donde el entrenador ve los sensores en tiempo real y recibe las alertas de riesgo.'],
 ];
 const N = 60;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -59,6 +59,8 @@ function Hero({ eyebrow, l1, l2, desc, side }) {
     <p class="mut text-lg sm:text-xl mt-6 max-w-2xl leading-relaxed">${desc}</p></div>${side}
   </section>`;
 }
+
+
 
 function Spark({ data, color }) {
   const pts = data.map((v, i) => `${(i / (N - 1)) * 300},${100 - v}`).join(' ');
@@ -168,7 +170,7 @@ function Login({ onAuth }) {
   const [err, setErr] = useState('');
   const submit = async () => {
     const key = name.trim().toLowerCase();
-    if (key.length < 3) return setErr('El usuario debe tener al menos 3 caracteres.');
+    if (key.length < 3) return setErr('El usuario debe tener por lo menos 3 caracteres.');
     if (pw.length < 4) return setErr('La contraseña debe tener al menos 4 caracteres.');
     const users = LS.g('agitaf_users', {});
     const h = await hash(pw);
@@ -315,7 +317,7 @@ function Problema() {
       </div>
     </div>
     <div class="grid md:grid-cols-2 gap-5 mt-8 items-center">
-      <div class="frame"><img src=${IMG.knee} alt="Sensores sobre y bajo la rodilla midiendo fuerza, impacto y ángulo de salto" class="w-full block"/></div>
+      <div class="frame"><img src=${IMG.knee} alt="Sensores arriba y bajo la rodilla midiendo fuerza, impacto y ángulo de salto" class="w-full block"/></div>
       <div>
         <h3 class="serif text-3xl">Decisiones de carga con contexto</h3>
         <p class="mut mt-4 leading-relaxed">Un sensor en el muslo y otro en la pantorrilla registran el movimiento. El algoritmo estima saltos y busca cambios sostenidos respecto de tu propia referencia.</p>
