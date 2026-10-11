@@ -87,8 +87,17 @@ function SensorCard({ title, sub, data, fatigue, risk }) {
   </div>`;
 }
 
-function Alertas({ risk, setRisk }) {
-  const [conn, setConn] = useState('off');
+function ConnectBar({ conn, onConnect }) {
+  return html`<div class="flex flex-wrap items-center gap-3">
+    <button onClick=${onConnect} class=${'px-5 py-3 rounded-lg font-medium text-sm transition ' + (conn === 'on' ? 'card ac' : conn === 'connecting' ? 'card mut animate-pulse' : 'bgac text-white hover:opacity-90')}>
+      ${conn === 'on' ? '● Conectado · Desconectar' : conn === 'connecting' ? 'Buscando dispositivo…' : 'Conectar parches AGITAF (BLE)'}
+    </button>
+    ${conn === 'on' && html`<span class="text-xs mut">AGITAF-BLE-01 · Batería 82% · -52 dBm</span>`}
+    ${conn === 'off' && html`<span class="text-xs mut">Se requiere conexión Bluetooth con los parches.</span>`}
+  </div>`;
+}
+
+function Alertas({ risk, setRisk, conn, onConnect }) {
   const [stage, setStage] = useState('Calentamiento');
   const [thigh, setThigh] = useState(Array(N).fill(0));
   const [shin, setShin] = useState(Array(N).fill(0));
@@ -96,11 +105,7 @@ function Alertas({ risk, setRisk }) {
   const [secs, setSecs] = useState(0);
   const t = useRef(0);
   const live = conn === 'on';
-  const connect = () => {
-    if (conn !== 'off') { setConn('off'); setRisk(false); return; }
-    setConn('connecting');
-    setTimeout(() => { setConn('on'); setSecs(0); setFat({ t: 0, s: 0 }); }, 1800);
-  };
+  useEffect(() => { if (live) { setSecs(0); setFat({ t: 0, s: 0 }); } }, [live]);
   useEffect(() => {
     if (!live) return;
     const id = setInterval(() => {
@@ -119,12 +124,7 @@ function Alertas({ risk, setRisk }) {
   return html`<div>
     <${Hero} eyebrow="Monitor en tiempo real · Muslo y canilla" l1="Alertas de" l2="Sobrecarga" desc="Conecta los parches AGITAF, elige la etapa del jugador y monitorea la actividad muscular. Ante índices de riesgo, el entrenador recibe una alerta de descanso." />
     <div class="space-y-5 pb-16">
-      <div class="flex flex-wrap items-center gap-3">
-        <button onClick=${connect} class=${'px-5 py-3 rounded-lg font-medium text-sm transition ' + (conn === 'on' ? 'card ac' : conn === 'connecting' ? 'card mut animate-pulse' : 'bgac text-white hover:opacity-90')}>
-          ${conn === 'on' ? '● Conectado · Desconectar' : conn === 'connecting' ? 'Buscando dispositivo…' : 'Conectar parches AGITAF (BLE)'}
-        </button>
-        ${live && html`<span class="text-xs mut">AGITAF-BLE-01 · Batería 87% · -52 dBm</span>`}
-      </div>
+      <${ConnectBar} conn=${conn} onConnect=${onConnect} />
       ${risk && html`<div class="rounded-xl bg-red-600 text-white p-5 shadow-[0_0_40px_rgba(239,68,68,.45)] animate-pulse">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -195,7 +195,7 @@ function Login({ onAuth }) {
   </div>`;
 }
 
-function Inicio({ user, go }) {
+function Inicio({ user, go, conn, onConnect }) {
   const key = 'agitaf_cal_' + user.toLowerCase();
   const [run, setRun] = useState(false);
   const [secs, setSecs] = useState(0);
@@ -221,6 +221,9 @@ function Inicio({ user, go }) {
   useEffect(() => {
     if (calRun && calJ >= TARGET) { setCalRun(false); const c = Math.min(3, cal + 1); setCal(c); LS.s(key, c); }
   }, [calJ, calRun]);
+  useEffect(() => {
+    if (conn !== 'on') { setCalRun(false); if (run) { setLast({ jumps, secs }); setRun(false); setFb(null); } }
+  }, [conn]);
   const toggle = () => {
     if (run) { setLast({ jumps, secs }); setRun(false); setFb(null); }
     else { setSecs(0); setJumps(0); setRun(true); }
@@ -229,15 +232,16 @@ function Inicio({ user, go }) {
   const Btn = (label, fn, dis) => html`<button onClick=${fn} disabled=${dis} class="btn bgor w-full mt-auto">${label}</button>`;
   return html`<div class="pb-16">
     <${Hero} eyebrow=${'Hola, ' + user} l1="Panel de" l2="Sesión Deportiva" desc="Inicia una sesión deportiva en vivo, revisa cómo te fue y mantén calibrados tus sensores." side=${LogoSide()} />
+    <div class="mb-6"><${ConnectBar} conn=${conn} onConnect=${onConnect} /></div>
     <div class="grid md:grid-cols-3 gap-5">
 
       <div class="card rounded-xl p-6 flex flex-col gap-3">
         <p class="or text-xs font-semibold" style=${{ letterSpacing: '.25em' }}>AGITAF</p>
         <h3 class="serif text-3xl">Sesión en vivo</h3>
-        <p class="mut">${run ? 'Sensores conectados · batería 82 %' : 'Sin sesión deportiva activa'}</p>
+        <p class="mut">${run ? 'Sensores conectados · batería 82 %' : conn === 'on' ? 'Parches conectados · sin sesión deportiva activa' : 'Parches desconectados · conéctalos para comenzar'}</p>
         <div class="mt-3"><p class="mut text-sm">Saltos detectados</p><p class="text-5xl font-semibold tabular-nums">${jumps}</p></div>
         <p class="mut mb-4">Duración: ${mmss(secs)} min</p>
-        ${Btn(run ? 'Finalizar sesión deportiva' : 'Iniciar sesión deportiva', toggle)}
+        ${Btn(run ? 'Finalizar sesión deportiva' : 'Iniciar sesión deportiva', toggle, !run && conn !== 'on')}
         <button onClick=${() => go('alertas')} class="ac text-sm text-left">Abrir monitor de alertas →</button>
       </div>
 
@@ -265,7 +269,7 @@ function Inicio({ user, go }) {
         <div class="flex gap-2 my-2">${[0, 1, 2].map(i => html`<div key=${i} class="h-2 flex-1 rounded-full" style=${{ background: i < cal ? 'var(--or)' : 'var(--trk)' }}></div>`)}</div>
         ${calRun ? html`<div><p class="mut text-sm">¡Salta ahora! Idealmente entre 15 y 20 veces.</p><p class="text-5xl font-semibold tabular-nums">${Math.min(calJ, TARGET)}<span class="mut text-2xl"> / ${TARGET}</span></p></div>`
           : html`<p class="text-sm mut flex-1">Al inicio de las primeras sesiones el dispositivo te pide saltar entre 15 y 20 veces. En la tercera sesión queda calibrado.</p>`}
-        ${calRun ? Btn('Calibrando…', () => {}, true) : Btn(done ? 'Recalibrar' : 'Iniciar calibración', () => { setCalJ(0); setCalRun(true); })}
+        ${calRun ? Btn('Calibrando…', () => {}, true) : Btn(done ? 'Recalibrar' : 'Iniciar calibración', () => { setCalJ(0); setCalRun(true); }, conn !== 'on')}
       </div>
     </div>
     ${DidYouKnow()}
@@ -361,11 +365,18 @@ function App() {
   const [tab, setTab] = useState('inicio');
   const [theme, setTheme] = useState('dark');
   const [risk, setRisk] = useState(false);
+  const [conn, setConn] = useState('off');
+  const connect = () => {
+    if (conn === 'connecting') return;
+    if (conn === 'on') { setConn('off'); setRisk(false); return; }
+    setConn('connecting');
+    setTimeout(() => setConn('on'), 1800);
+  };
   const [user, setUser] = useState(LS.g('agitaf_session', null));
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
   useEffect(() => { document.body.classList.toggle('riskbg', risk); }, [risk]);
   const auth = n => { LS.s('agitaf_session', n); setUser(n); };
-  const logout = () => { LS.s('agitaf_session', null); setUser(null); setRisk(false); setTab('inicio'); };
+  const logout = () => { LS.s('agitaf_session', null); setUser(null); setRisk(false); setConn('off'); setTab('inicio'); };
   const tabs = [['inicio', 'Inicio'], ['alertas', 'Alertas'], ['nosotros', 'Nosotros'], ['equipo', 'Equipo']];
   const gated = (tab === 'inicio' || tab === 'alertas') && !user;
   return html`<div class="min-h-screen">
@@ -378,7 +389,7 @@ function App() {
           <button onClick=${() => setTheme(theme === 'dark' ? 'light' : 'dark')} class="card rounded-md px-3 py-1.5 text-sm">${theme === 'dark' ? '☀ Modo claro' : '☾ Modo oscuro'}</button>
         </nav>
       </header>
-      ${gated ? html`<${Login} onAuth=${auth} />` : tab === 'inicio' ? html`<${Inicio} key=${user} user=${user} go=${setTab} />` : tab === 'alertas' ? html`<${Alertas} risk=${risk} setRisk=${setRisk} />` : tab === 'nosotros' ? html`<${Nosotros} />` : html`<${Equipo} />`}
+      ${gated ? html`<${Login} onAuth=${auth} />` : tab === 'inicio' ? html`<${Inicio} key=${user} user=${user} go=${setTab} conn=${conn} onConnect=${connect} />` : tab === 'alertas' ? html`<${Alertas} risk=${risk} setRisk=${setRisk} conn=${conn} onConnect=${connect} />` : tab === 'nosotros' ? html`<${Nosotros} />` : html`<${Equipo} />`}
       <footer class="flex items-center justify-center gap-2 text-xs mut pb-8"><span class="w-6 h-6 rounded-full bg-white p-1 flex items-center justify-center"><img src=${IMG.icon} alt="" class="w-full h-full object-contain"/></span>AGITAF Prototipo</footer>
     </div>
   </div>`;
