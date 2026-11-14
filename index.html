@@ -37,7 +37,7 @@ const hash = async s => { try { const b = await crypto.subtle.digest('SHA-256', 
 const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 
 // ---------- Bluetooth real (Web Bluetooth API) ----------
-// Los parches usan el servicio UART de Nordic (NUS); también se acepta HM-10 (FFE0/FFE1).
+// Los sensores usan el servicio UART de Nordic (NUS); también se acepta HM-10 (FFE0/FFE1).
 const NUS = { svc: '6e400001-b5a3-f393-e0a9-e50e24dcca9e', tx: '6e400003-b5a3-f393-e0a9-e50e24dcca9e', rx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e' };
 const newScore = () => ({ base: [], mp: 0, sp: 1, mw: 0, sw: 1, ewma: 0, over: 0 });
 // Referencia del día (primeros 20 saltos) + promedio móvil exponencial; alerta si supera 1,17 durante 3 saltos seguidos.
@@ -135,11 +135,11 @@ const STAGES = {
   'Partido': { base: 68, alert: 'Riesgo crítico en competencia. Solicita cambio, hidrátate y descansa mínimo 5 min. Evaluación del cuerpo médico recomendada.' },
 };
 const TEAM = [
-  ['María Fernanda Muñoz', 'Prototipos análogos', 'Investiga prototipos análogos —dispositivos y soluciones similares que ya existen— para entender qué funciona, qué no y por qué. Su trabajo asegura que los parches AGITAF sean cómodos de usar durante el juego y viables para el cliente, sin sacrificar la precisión de las mediciones.'],
-  ['José Manuel Valdés', 'Estudio de mercado', 'Analiza el mercado del deporte y la tecnología vestible: quiénes son los competidores, qué necesitan clubes, entrenadores y jugadores, y dónde hay oportunidades reales. Gracias a su estudio, AGITAF se plantea como una propuesta con sentido y no solo como una buena idea. Además, redacta el informe técnico, investiga la evidencia científica y programa las simulaciones del algoritmo.'],
-  ['Benjamín Cano', 'Sensores', 'Investiga y compara los sensores de movimiento y actividad muscular disponibles, evaluando precisión, tamaño, consumo y compatibilidad con Arduino y Bluetooth. Es quien define con qué tecnología se mide el muslo y la pantorrilla para detectar riesgos a tiempo.'],
-  ['Javier Barros', 'Encuestas', 'Diseña y aplica encuestas para conocer la realidad de jugadores y entrenadores: qué lesiones son más comunes, cómo se previenen hoy y qué esperarían de una herramienta como AGITAF. Convierte la experiencia de quienes viven el básquetbol en datos concretos para decidir.'],
-  ['Vicente Durán', 'Desarrollo web', 'Desarrollador web del proyecto. Recolecta los datos y requerimientos para construir este sitio web y conectar los dispositivos, y desarrolla la interfaz donde el entrenador ve los sensores en tiempo real y recibe las alertas de riesgo.'],
+  ['María Fernanda Muñoz', 'Prototipos y modelo de negocio', 'Investiga prototipos análogos para entender qué funciona, qué no y por qué, y asegurar que los sensores y su soporte sean cómodos de usar durante el juego y viables para el cliente. También trabaja el modelo de negocio (ingresos, mercado total, atendible y objetivo) y apoya el diseño y la planilla de costos.'],
+  ['José Manuel Valdés', 'Estudio de mercado y costos', 'Analiza el mercado del deporte y la tecnología vestible y los costos del producto, y ajusta el modelo de negocio. Además, redacta el informe técnico, investiga la evidencia científica y programa las simulaciones del algoritmo.'],
+  ['Benjamín Cano', 'Sensores y prototipado', 'Investiga y compara los sensores de movimiento disponibles, evaluando precisión, tamaño, consumo y compatibilidad con Arduino y Bluetooth, y participa en el prototipado y en los avances con Arduino. También investiga el mercado, los clientes y el ahorro que puede lograr un club.'],
+  ['Javier Barros', 'Encuestas y costos operativos', 'Diseña y aplica encuestas para conocer la realidad de jugadores y entrenadores, investiga los costos operativos y apoya la planilla de costos. Participa en las entrevistas con clubes, en los avances con Arduino y en la presentación oral.'],
+  ['Vicente Durán', 'Desarrollo web', 'Desarrollador web del proyecto: construye este sitio web y la app, conecta los dispositivos y desarrolla la interfaz donde se ven los sensores en tiempo real y se reciben las alertas de riesgo. También investiga el modelo de negocio y participa en los avances con Arduino y en las entrevistas.'],
 ];
 const N = 60;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -185,12 +185,12 @@ function ConnectBar({ source, connecting, err, links, onRole, onSerial, onDemo }
   return html`<div class="space-y-3">
     <div class="flex flex-wrap items-center gap-3">
       ${roles.map(([r, l]) => html`<button key=${r} onClick=${() => onRole(r)} disabled=${connecting === r} class=${'px-5 py-3 rounded-lg font-medium text-sm transition ' + (links[r] ? 'card ac' : 'bgac text-white hover:opacity-90') + (connecting === r ? ' animate-pulse' : '')}>
-        ${links[r] ? '● ' + l + ' conectado · Desconectar' : connecting === r ? 'Buscando parche…' : 'Conectar parche ' + l.toLowerCase() + ' (BLE)'}</button>${!links[r] && BT.okSerial && html`<button onClick=${() => onSerial(r)} disabled=${connecting === r} class="text-sm mut underline">o con HC-05</button>`}`)}
+        ${links[r] ? '● ' + l + ' conectado · Desconectar' : connecting === r ? 'Buscando sensor…' : 'Conectar sensor ' + (r === 'muslo' ? 'del muslo' : 'de la pantorrilla') + ' (BLE)'}</button>${!links[r] && BT.okSerial && html`<button onClick=${() => onSerial(r)} disabled=${connecting === r} class="text-sm mut underline">o con HC-05</button>`}`)}
       ${source !== 'ble' && html`<button onClick=${onDemo} class="text-sm mut underline">${source === 'demo' ? 'Salir del modo demo' : 'Probar en modo demo'}</button>`}
     </div>
     ${source === 'ble' ? html`<p class="text-xs mut">${Object.values(links).map(x => x.name).join(' · ')} · datos reales por Bluetooth</p>`
       : source === 'demo' ? html`<p class="text-xs mut">Modo demo · datos simulados, sin dispositivo.</p>`
-      : html`<p class="text-xs mut">Se requiere conexión Bluetooth con los parches.</p>`}
+      : html`<p class="text-xs mut">Se requiere conexión Bluetooth con los sensores.</p>`}
     ${!BT.ok && !BT.okSerial && html`<p class="text-xs text-red-400">Este navegador no admite Web Bluetooth. Usa Chrome o Edge (computador o Android).</p>`}
     ${err && html`<p class="text-xs text-red-400">${err}</p>`}
   </div>`;
@@ -221,7 +221,7 @@ function Alertas({ risk, setRisk, conn, source, cb }) {
   }, [live, stage, risk, source]);
   const asym = Math.round(Math.abs(thigh[N - 1] - shin[N - 1]));
   return html`<div>
-    <${Hero} eyebrow="Monitor en tiempo real · Muslo y pantorrilla" l1="Alertas de" l2="Sobrecarga" desc="Conecta los parches AGITAF, elige la etapa del jugador y monitorea la actividad muscular. Ante índices de riesgo, el entrenador o el cuerpo médico recibe una alerta de descanso. La alerta se activa cuando el patrón de aterrizaje se aleja de forma sostenida de la referencia del jugador." />
+    <${Hero} eyebrow="Monitor en tiempo real · Muslo y pantorrilla" l1="Alertas de" l2="Sobrecarga" desc="Conecta los sensores AGITAF, elige la etapa del jugador y monitorea la actividad muscular. Ante índices de riesgo, el entrenador o el cuerpo médico recibe una alerta de descanso. La alerta se activa cuando el patrón de aterrizaje se aleja de forma sostenida de la referencia del jugador." />
     <div class="space-y-5 pb-16">
       <${ConnectBar} ...${cb} />
       ${risk && html`<div class="rounded-xl bg-red-600 text-white p-5 shadow-[0_0_40px_rgba(239,68,68,.45)] animate-pulse">
@@ -240,7 +240,7 @@ function Alertas({ risk, setRisk, conn, source, cb }) {
           ${Object.keys(STAGES).map(s => html`<button key=${s} onClick=${() => setStage(s)} class=${'px-3 py-3 rounded-lg text-sm font-medium transition border ' + (stage === s ? 'bgor text-white border-transparent' : 'border-[color:var(--bd)] hover:opacity-80')}>${s}</button>`)}
         </div>
       </div>
-      ${!live ? html`<div class="rounded-xl border border-dashed p-10 text-center mut" style=${{ borderColor: 'var(--bd)' }}>Conecta los parches AGITAF para comenzar a recibir datos de los sensores.</div>` : html`<div class="space-y-5">
+      ${!live ? html`<div class="rounded-xl border border-dashed p-10 text-center mut" style=${{ borderColor: 'var(--bd)' }}>Conecta los sensores AGITAF para comenzar a recibir datos de los sensores.</div>` : html`<div class="space-y-5">
         <div class="grid md:grid-cols-2 gap-5">
           <${SensorCard} title="Muslo" sub="Cuádriceps · sobre la rodilla" data=${thigh} fatigue=${fat.t} risk=${risk} />
           <${SensorCard} title="Pantorrilla" sub="Gemelos · bajo la rodilla" data=${shin} fatigue=${fat.s} risk=${risk} />
@@ -339,7 +339,7 @@ function Inicio({ user, go, conn, source, cb }) {
       <div class="card rounded-xl p-6 flex flex-col gap-3">
         <p class="or text-xs font-semibold" style=${{ letterSpacing: '.25em' }}>AGITAF</p>
         <h3 class="serif text-3xl">Sesión en vivo</h3>
-        <p class="mut">${run ? (source === 'ble' ? 'Parches conectados · registrando' : 'Sensores conectados · batería 82 %') : conn === 'on' ? 'Parches conectados · sin sesión deportiva activa' : 'Parches desconectados · conéctalos para comenzar'}</p>
+        <p class="mut">${run ? (source === 'ble' ? 'Sensores conectados · registrando' : 'Sensores conectados · batería 82 %') : conn === 'on' ? 'Sensores conectados · sin sesión deportiva activa' : 'Sensores desconectados · conéctalos para comenzar'}</p>
         <div class="mt-3"><p class="mut text-sm">Saltos detectados</p><p class="text-5xl font-semibold tabular-nums">${jumps}</p></div>
         <p class="mut mb-4">Duración: ${mmss(secs)} min</p>
         ${Btn(run ? 'Finalizar sesión deportiva' : 'Iniciar sesión deportiva', toggle, !run && (conn !== 'on' || calRun))}
@@ -352,7 +352,7 @@ function Inicio({ user, go, conn, source, cb }) {
         ${last ? html`<div class="flex flex-col gap-3 flex-1">
           <p class="mut">Tu patrón de aterrizaje cambió</p>
           <p class="text-sm mut">Última sesión: ${last.jumps} saltos · ${mmss(last.secs)} min</p>
-          <p class="mt-2">Comprueba la colocación de los parches.</p>
+          <p class="mt-2">Comprueba la colocación de los sensores y la rodillera.</p>
           <p>¿Cómo te sientes? Registra molestias y esfuerzo.</p>
           ${fb === 'open' && html`<div class="space-y-3 mb-2">
             <label class="text-sm mut block">Esfuerzo percibido: <span class="or font-semibold">${eff}/10</span>
@@ -369,7 +369,7 @@ function Inicio({ user, go, conn, source, cb }) {
         <p class="mut">${done ? 'Sensores calibrados ✓' : 'Sesión de calibración ' + (cal + 1) + ' de 3'}</p>
         <div class="flex gap-2 my-2">${[0, 1, 2].map(i => html`<div key=${i} class="h-2 flex-1 rounded-full" style=${{ background: i < cal ? 'var(--or)' : 'var(--trk)' }}></div>`)}</div>
         ${calRun ? html`<div><p class="mut text-sm">¡Salta ahora! Idealmente entre 15 y 20 veces.</p><p class="text-5xl font-semibold tabular-nums">${Math.min(calJ, TARGET)}<span class="mut text-2xl"> / ${TARGET}</span></p></div>`
-          : html`<p class="text-sm mut flex-1">El dispositivo tiene un par de sesiones de calibración al comienzo. En ellas te pide saltar unas 15 a 20 veces para ajustarse a ti, y a partir de la tercera sesión queda calibrado. Además, los primeros 20 saltos de cada sesión fijan tu punto de partida del día, lo que anula el efecto de volver a pegar los parches.</p>`}
+          : html`<p class="text-sm mut flex-1">El dispositivo tiene un par de sesiones de calibración al comienzo. En ellas te pide saltar unas 15 a 20 veces para ajustarse a ti, y a partir de la tercera sesión queda calibrado. Además, los primeros 20 saltos de cada sesión fijan tu punto de partida del día, lo que anula el efecto de volver a colocar los sensores.</p>`}
         ${calRun ? Btn('Calibrando…', () => {}, true) : Btn(done ? 'Recalibrar' : 'Iniciar calibración', () => { if (source === 'ble') BT.cmd('CR'); setCalJ(0); setCalRun(true); }, conn !== 'on' || run)}
       </div>
     </div>
@@ -429,8 +429,8 @@ function Problema() {
 function Tecnica() {
   const head = (eb, t1, t2) => html`<div><div class="w-20 h-0.5 mb-6" style=${{ background: 'linear-gradient(90deg,var(--or),#ffb347)' }}></div><p class="or uppercase text-sm mb-4" style=${{ letterSpacing: '.28em' }}>${eb}</p><h2 class="serif text-4xl sm:text-5xl leading-tight">${t1} <span class="grad">${t2}</span></h2></div>`;
   const card = ([t, d], i) => html`<div key=${t} class="card rounded-xl p-6"><p class="or text-sm font-semibold" style=${{ letterSpacing: '.25em' }}>${String(i + 1).padStart(2, '0')}</p><h3 class="serif text-2xl mt-3">${t}</h3><p class="mut mt-3 leading-relaxed text-sm">${d}</p></div>`;
-  const how = [['Detecta el salto', 'Cada parche mide a 500 Hz. En el aire la aceleración cae a cerca de 0 g y al aterrizar marca varios g: esa firma separa cada salto de la carrera.'], ['Se sincronizan solos', 'Los parches son independientes, sin cables que crucen la rodilla. Se alinean usando el instante del aterrizaje de cada salto.'], ['Referencia del día', 'Cada sesión parte de tu propia referencia: AGITAF compara cómo aterrizas con lo que es habitual en ti.'], ['Alerta sostenida', 'Un filtro ignora saltos aislados. Si el patrón se aleja de tu referencia durante 3 aterrizajes seguidos, se envía la alerta.']];
-  const road = [['Oct 2026', 'Integración de los sensores', 'Conectar los dos sensores y comprobar que registren aceleraciones y velocidades angulares.'], ['Oct–Nov 2026', 'Comunicación y sincronización', 'Transmisión de datos y sincronización de las mediciones de ambos sensores.'], ['Nov 2026', 'Procesamiento de datos', 'Detección de saltos, registro de impactos y estimación de la flexión de rodilla frente a una referencia individual.'], ['Nov 2026', 'Pruebas y ajustes', 'Pruebas controladas con sentadillas y saltos, comparadas con video, para corregir sincronización, fijación y detección.'], ['Nov 2026', 'Demostración del MVP', 'Presentación del sistema integrado y de las funcionalidades validadas experimentalmente.']];
+  const how = [['Detecta el salto', 'Cada sensor mide a 500 Hz. En el aire la aceleración cae a cerca de 0 g y al aterrizar marca varios g: esa firma separa cada salto de la carrera.'], ['Se sincronizan solos', 'Los sensores son independientes, sin cables que crucen la rodilla. Se alinean usando el instante del aterrizaje de cada salto.'], ['Referencia del día', 'Cada sesión parte de tu propia referencia: AGITAF compara cómo aterrizas con lo que es habitual en ti.'], ['Alerta sostenida', 'Un filtro ignora saltos aislados. Si el patrón se aleja de tu referencia durante 3 aterrizajes seguidos, se envía la alerta.']];
+  const road = [['Oct 2026', 'Integración de los sensores', 'Conectar los dos sensores y comprobar que registren aceleraciones y velocidades angulares.'], ['Oct–Nov 2026', 'Comunicación y sincronización', 'Transmisión de datos y sincronización de las mediciones de ambos sensores.'], ['Nov 2026', 'Procesamiento de datos', 'Detección de saltos, registro de impactos y estimación de la flexión de rodilla frente a una referencia individual.'], ['Nov 2026', 'Pruebas y ajustes', 'Pruebas controladas con sentadillas y saltos, comparadas con video, para corregir sincronización, fijación y detección.'], ['Nov 2026', 'Demostración del MVP', 'Presentación del sistema integrado y de las funcionalidades validadas experimentalmente.'], ['Tras la temporada', 'Pilotos en terreno', 'Pruebas con planteles de clubes profesionales, sujetas a coordinación, para validar el prototipo en entrenamientos reales y recoger retroalimentación.']];
   return html`<div class="mt-16 space-y-16">
     <div>${head('Tecnología', 'Cómo funciona', 'por dentro')}
       <p class="mut mt-4 max-w-3xl leading-relaxed">AGITAF no estima la carga del tendón: mide cuánto y qué tan rápido se dobla la rodilla, el impacto y el tiempo de vuelo, y detecta cuándo cambian respecto de lo habitual del jugador. Con la fatiga, la forma de aterrizar cambia.</p>
@@ -440,19 +440,45 @@ function Tecnica() {
   </div>`;
 }
 
+const sechead = (eb, t1, t2) => html`<div><div class="w-20 h-0.5 mb-6" style=${{ background: 'linear-gradient(90deg,var(--or),#ffb347)' }}></div><p class="or uppercase text-sm mb-4" style=${{ letterSpacing: '.28em' }}>${eb}</p><h2 class="serif text-4xl sm:text-5xl leading-tight">${t1} <span class="grad">${t2}</span></h2></div>`;
+const tcard = ([t, d]) => html`<div key=${t} class="card rounded-xl p-6"><h3 class="serif text-2xl">${t}</h3><p class="mut mt-3 leading-relaxed text-sm">${d}</p></div>`;
+
+function Producto() {
+  const kit = [['Sensores (2 por kit)', 'Recargables, con acelerómetro y cubiertos. Uno va sobre la rodilla y el otro bajo ella.'], ['Rodillera compresiva', 'Funciona como soporte de los sensores y los mantiene en su lugar.'], ['Cargador USB-C', 'Para recargar los sensores entre sesiones.']];
+  const ben = [['Prevención temprana', 'Los sensores entregan información en tiempo real a profesionales de la salud y a deportistas para tomar decisiones.'], ['Monitorea y sigue la evolución', 'Un indicador de carga permite ver cómo evoluciona cada jugador de una sesión a otra.'], ['Reintegración más segura', 'Apoya el retorno al juego después de una lesión con información de carga y movimiento.']];
+  return html`<div class="mt-16 space-y-16">
+    <div>${sechead('El producto', 'Qué incluye', 'el kit')}<div class="grid md:grid-cols-3 gap-5 mt-8">${kit.map(tcard)}</div></div>
+    <div>${sechead('Beneficios', 'Por qué', 'elegir AGITAF')}<div class="grid md:grid-cols-3 gap-5 mt-8">${ben.map(tcard)}</div></div>
+  </div>`;
+}
+
+function Modelo() {
+  const who = [['El club compra', 'La gerencia deportiva contrata y financia la solución.'], ['El jugador la usa', 'Utiliza los sensores en entrenamientos y partidos.'], ['El cuerpo médico interpreta', 'Preparadores físicos y kinesiólogos interpretan los datos y validan el producto.']];
+  const mkt = [['13', 'clubes de Liga Uno', 'Segmento inicial · LNB Chile, 2026'], ['36', 'clubes de la LNB en total', 'Segmento de crecimiento · LNB Chile, 2026'], ['US$103,6 M', 'mercado de wearables deportivos en LATAM', 'Grand View Research, 2023 · multideportivo'], ['$21–27 M', 'costo anual estimado de lesiones por club (CLP)', 'Estimación del equipo; los clubes tienen presupuestos distintos']];
+  return html`<div class="mt-16 space-y-16">
+    <div>${sechead('Cómo llegamos al cliente', 'Quién la compra,', 'quién la usa')}<div class="grid md:grid-cols-3 gap-5 mt-8">${who.map(tcard)}</div>
+      <p class="mut mt-4 max-w-3xl leading-relaxed text-sm">Se le vende al club, pero a quienes hay que convencer es al cuerpo médico, que es quien valida el producto.</p></div>
+    <div>${sechead('Mercado', 'A quién', 'le servimos')}
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">${mkt.map(([n, t, f]) => html`<div key=${n} class="card rounded-xl p-6"><p class="serif text-4xl or">${n}</p><h3 class="font-semibold mt-3">${t}</h3><p class="mut text-xs mt-3">${f}</p></div>`)}</div>
+      <p class="mut mt-6 max-w-3xl leading-relaxed">Partimos con clubes profesionales de básquetbol en Chile. Después, la expansión internacional y a otros deportes, adaptando algoritmos y patrones, el diseño de la rodillera, los idiomas y las normativas según el deporte y el país.</p></div>
+  </div>`;
+}
+
 function Nosotros() {
   const steps = [
-    ['01', 'Dos parches con sensor', 'Dos parches adhesivos de tela, color piel y desechables, cada uno con un sensor de movimiento de 6 ejes (acelerómetro y giroscopio): uno en el muslo, sobre la rodilla, y otro en la pantorrilla, bajo la rodilla. Los parches se renuevan; el sensor se reutiliza. Un módulo Bluetooth (BLE) los conecta.'],
+    ['01', 'Dos sensores en una rodillera', 'Dos sensores recargables con acelerómetro, cubiertos y sujetos por una rodillera compresiva que los mantiene en su lugar: uno sobre la rodilla, en el muslo, y otro bajo ella, en la pantorrilla. Se conectan a la app por Bluetooth (BLE).'],
     ['02', 'Fatiga en conjunto', 'AGITAF toma la información de ambos sensores y, a partir de ella, calcula la fatiga. Los dos funcionan en conjunto.'],
-    ['03', 'Alerta al entrenador', 'Cuando los índices indican riesgo de sobrecarga, AGITAF le avisa al entrenador que el basquetbolista puede lesionarse.'],
+    ['03', 'Alerta al entrenador', 'Cuando los índices indican riesgo de sobrecarga, AGITAF le avisa al entrenador o al cuerpo médico que el basquetbolista puede lesionarse.'],
   ];
   return html`<div class="pb-16">
-    <${Hero} eyebrow="Quiénes somos · Qué es AGITAF" l1="Prevención de" l2="Lesiones en Básquet" desc="AGITAF es una solución para la prevención de lesiones en el básquetbol, pensada como un aporte a la seguridad en el deporte." side=${html`<div class="frame w-full max-w-xs lg:w-72 shrink-0"><img src=${IMG.player} alt="Basquetbolista con sensores en muslo y pantorrilla" class="w-full block"/></div>`} />
+    <${Hero} eyebrow="Quiénes somos · Qué es AGITAF" l1="Prevención de" l2="Lesiones en Básquet" desc="AGITAF es una solución wearable que entrega un indicador de carga para prevenir lesiones como la tendinopatía rotuliana en deportes como el básquetbol." side=${html`<div class="frame w-full max-w-xs lg:w-72 shrink-0"><img src=${IMG.player} alt="Basquetbolista con sensores en muslo y pantorrilla" class="w-full block"/></div>`} />
     <div class="grid md:grid-cols-3 gap-5">
       ${steps.map(([n, t, d]) => html`<div key=${n} class="card rounded-xl p-6"><p class="or text-sm font-semibold" style=${{ letterSpacing: '.25em' }}>${n}</p><h3 class="serif text-2xl mt-3">${t}</h3><p class="mut mt-3 leading-relaxed">${d}</p></div>`)}
     </div>
+    <${Producto} />
     <${Problema} />
     <${Tecnica} />
+    <${Modelo} />
     <div class="card rounded-xl p-6 mt-16">
       <h3 class="serif text-2xl">Para cada momento del jugador</h3>
       <p class="mut mt-3 leading-relaxed max-w-3xl">AGITAF se puede usar en calentamiento, entrenamiento técnico y partido. Las alertas se adaptan a la etapa para recomendar el descanso adecuado.</p>
@@ -476,9 +502,54 @@ function Equipo() {
   </div>`;
 }
 
+function Planes() {
+  const plans = [
+    ['Plan Individual', 'Para el jugador que quiere seguir su propio progreso.', ['Datos básicos'], ['Progresos', 'Formas de mejorar', 'Balances', 'Plan integral deportivo']],
+    ['Plan Equipo', 'Enfocado en que lo utilice el entrenador para el monitoreo del plantel.', ['Funciones básicas'], ['Rendimiento', 'Tablas comparativas', 'Planes de acción']],
+  ];
+  const list = (items, col) => html`<ul class="mt-3 space-y-2">${items.map(i => html`<li key=${i} class="flex gap-3"><span style=${{ color: col }}>●</span><span>${i}</span></li>`)}</ul>`;
+  return html`<div class="pb-16">
+    <${Hero} eyebrow="La app" l1="Planes" l2="gratuitos y de suscripción" desc="Cada plan tiene una parte gratuita y una de suscripción. Los cobros son mensuales y se hacen desde la misma app." />
+    <div class="grid md:grid-cols-2 gap-5">
+      ${plans.map(([t, d, free, sus]) => html`<div key=${t} class="card rounded-xl p-6 flex flex-col">
+        <h3 class="serif text-3xl">${t}</h3>
+        <p class="mut mt-2 text-sm leading-relaxed">${d}</p>
+        <div class="mt-6 rounded-lg p-5" style=${{ background: 'var(--trk)' }}>
+          <p class="text-xs font-semibold uppercase mut" style=${{ letterSpacing: '.2em' }}>Parte gratuita</p>
+          ${list(free, 'var(--bl)')}
+        </div>
+        <div class="mt-4 rounded-lg p-5 border" style=${{ borderColor: 'var(--or)' }}>
+          <p class="text-xs font-semibold uppercase or" style=${{ letterSpacing: '.2em' }}>Suscripción</p>
+          ${list(sus, 'var(--or)')}
+        </div>
+      </div>`)}
+    </div>
+  </div>`;
+}
+
+function NosotrosHub({ sub, setSub }) {
+  const opts = [['info', 'Qué es AGITAF', 'Qué hacemos, cómo funciona y por qué importa.'], ['equipo', 'Equipo', 'Las personas detrás del proyecto y su rol.']];
+  if (sub) return html`<div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button onClick=${() => setSub(null)} class="text-sm mut px-2">← Nosotros</button>
+      ${opts.map(([k, t]) => html`<button key=${k} onClick=${() => setSub(k)} class=${'text-sm px-4 py-2 rounded-full border ' + (sub === k ? 'bgac text-white border-transparent' : 'border-[color:var(--bd)] mut')}>${t}</button>`)}
+    </div>
+    ${sub === 'info' ? html`<${Nosotros} />` : html`<${Equipo} />`}
+  </div>`;
+  return html`<div class="pb-16">
+    <${Hero} eyebrow="Nosotros" l1="Conoce" l2="AGITAF" desc="Elige qué quieres ver: de qué trata el proyecto o quiénes lo hacemos." side=${LogoSide()} />
+    <div class="grid md:grid-cols-2 gap-5">
+      ${opts.map(([k, t, d]) => html`<button key=${k} onClick=${() => setSub(k)} class="card rounded-xl p-8 text-left hover:opacity-90 transition">
+        <h3 class="serif text-3xl">${t}</h3><p class="mut mt-3 leading-relaxed">${d}</p><p class="or mt-6 text-sm font-semibold">Ver →</p>
+      </button>`)}
+    </div>
+  </div>`;
+}
+
 function App() {
   const [tab, setTab] = useState('inicio');
   const [theme, setTheme] = useState('dark');
+  const [sub, setSub] = useState(null);
   const [risk, setRisk] = useState(false);
   const [demo, setDemo] = useState(false);
   const [connecting, setConnecting] = useState(null);
@@ -511,19 +582,19 @@ function App() {
   useEffect(() => { document.body.classList.toggle('riskbg', risk); }, [risk]);
   const auth = n => { LS.s('agitaf_session', n); setUser(n); };
   const logout = () => { LS.s('agitaf_session', null); setUser(null); setRisk(false); ['muslo', 'pantorrilla'].forEach(r => BT.disconnect(r)); setDemo(false); setTab('inicio'); };
-  const tabs = [['inicio', 'Inicio'], ['alertas', 'Alertas'], ['nosotros', 'Nosotros'], ['equipo', 'Equipo']];
+  const tabs = [['inicio', 'Inicio'], ['alertas', 'Alertas'], ['planes', 'Planes'], ['nosotros', 'Nosotros']];
   const gated = (tab === 'inicio' || tab === 'alertas') && !user;
   return html`<div class="min-h-screen">
     <div class="max-w-5xl mx-auto px-5">
       <header class="flex flex-wrap items-center justify-between gap-3 py-6">
         <button onClick=${() => setTab('inicio')} class="flex items-center gap-3"><span class="w-11 h-11 rounded-full bg-white flex items-center justify-center p-1.5"><img src=${IMG.icon} alt="" class="w-full h-full object-contain"/></span><span class="serif text-2xl">AGITAF<span class="or">.</span></span></button>
         <nav class="flex flex-wrap items-center gap-x-5 gap-y-2 sm:gap-x-7">
-          ${tabs.map(([k, l]) => html`<button key=${k} onClick=${() => setTab(k)} class=${'text-base sm:text-lg transition ' + (tab === k ? 'font-medium' : 'mut hover:opacity-80')}>${l}</button>`)}
+          ${tabs.map(([k, l]) => html`<button key=${k} onClick=${() => { setTab(k); setSub(null); }} class=${'text-base sm:text-lg transition ' + (tab === k ? 'font-medium' : 'mut hover:opacity-80')}>${l}</button>`)}
           ${user && html`<button onClick=${logout} class="text-sm mut hover:opacity-80">${user} · Salir</button>`}
           <button onClick=${() => setTheme(theme === 'dark' ? 'light' : 'dark')} class="card rounded-md px-3 py-1.5 text-sm">${theme === 'dark' ? '☀ Modo claro' : '☾ Modo oscuro'}</button>
         </nav>
       </header>
-      ${gated ? html`<${Login} onAuth=${auth} />` : tab === 'inicio' ? html`<${Inicio} key=${user} user=${user} go=${setTab} conn=${conn} source=${source} cb=${cb} />` : tab === 'alertas' ? html`<${Alertas} risk=${risk} setRisk=${setRisk} conn=${conn} source=${source} cb=${cb} />` : tab === 'nosotros' ? html`<${Nosotros} />` : html`<${Equipo} />`}
+      ${gated ? html`<${Login} onAuth=${auth} />` : tab === 'inicio' ? html`<${Inicio} key=${user} user=${user} go=${setTab} conn=${conn} source=${source} cb=${cb} />` : tab === 'alertas' ? html`<${Alertas} risk=${risk} setRisk=${setRisk} conn=${conn} source=${source} cb=${cb} />` : tab === 'planes' ? html`<${Planes} />` : html`<${NosotrosHub} sub=${sub} setSub=${setSub} />`}
       <footer class="flex items-center justify-center gap-2 text-xs mut pb-8"><span class="w-6 h-6 rounded-full bg-white p-1 flex items-center justify-center"><img src=${IMG.icon} alt="" class="w-full h-full object-contain"/></span>AGITAF Prototipo</footer>
     </div>
   </div>`;
