@@ -70,8 +70,11 @@ const BT = {
   jumps() { return Math.max(0, ...Object.values(this.data).filter(Boolean).map(d => d.n)); },
   thr: 1.6,
   alertsOn: true,
-  H: { t0: null, last: null, miss: 0, rows: [], raw: [], ev: [] },
-  resetH() { this.H = { t0: null, last: null, miss: 0, rows: [], raw: [], ev: [] }; this.det = [null, null]; },
+  H: { t0: null, last: null, off: 0, miss: 0, rows: [], raw: [], ev: [] },
+  resetH() { this.H = { t0: null, last: null, off: 0, miss: 0, rows: [], raw: [], ev: [] }; this.det = [null, null]; this.pend = null; },
+  // Diagnóstico de la conexión serie: bytes y líneas recibidas, última línea y formato detectado.
+  diag: { bytes: 0, lines: 0, ok: 0, last: '', fmt: '' },
+  pend: null,
   both() { ['muslo', 'pantorrilla'].forEach(r => { if (!this.data[r]) this.data[r] = { a: 1, w: 0, n: 0, pico: 0, picoW: 0, msg: '', score: newScore() }; }); },
   demoTimer: null,
   demoToggle() {
@@ -85,10 +88,15 @@ const BT = {
   },
   det: [null, null],
   onRow(p) {
-    const t = +p[0] / 1000, H = this.H, g1 = +p[4], g2 = +p[11];
+    const H = this.H, g1 = +p[4], g2 = +p[11];
+    let t = +p[0] / 1000 + H.off;
     if (isNaN(t) || isNaN(g1) || isNaN(g2)) return;
+    // Si el Arduino se reinicia, t_ms vuelve a 0: se continúa el eje de tiempo en vez de romper el gráfico.
+    if (H.last !== null && t < H.last - 0.5) { H.off += H.last - t + 0.02; t = +p[0] / 1000 + H.off; }
+    if (H.last !== null && t <= H.last) return;
     if (H.t0 === null) H.t0 = t;
-    if (H.last !== null && t - H.last > 0.03) H.miss += Math.round((t - H.last) / 0.02) - 1;
+    if (!p.legacy && H.last !== null && t - H.last > 0.03) H.miss += Math.round((t - H.last) / 0.02) - 1;
+    this.diag.ok++;
     H.last = t;
     H.raw.push(p.slice(0, 15).map(Number));
     H.rows.push([t - H.t0, g1, g2, Math.hypot(+p[5], +p[6], +p[7]), Math.hypot(+p[12], +p[13], +p[14])]);
@@ -119,8 +127,24 @@ const BT = {
     });
   },
   onLine(role, line) {
-    const q = line.split(',');
-    if (q.length === 15 && !isNaN(+q[0])) { this.both(); this.onRow(q); return; }
+    if (!line) return;
+    this.diag.lines++; this.diag.last = line.slice(0, 120);
+    let q = line.split(',').map(x => x.trim());
+    if (q.length === 15 && isNaN(+q[0])) { const m = q[0].match(/-?\d+$/); if (m) q[0] = m[0]; }
+    if (q.length === 15 && q.every(x => x !== '' && !isNaN(+x))) { this.diag.fmt = 'csv'; this.both(); this.onRow(q); return; }
+    // Formato antiguo (Av1.ino): "SENSOR 1 | Acel: 1.02 g | Giro X: 1.0 Y: 2.0 Z: 3.0 grados/s"
+    const v = line.match(/SENSOR\s*([12]).*?Acel:\s*(-?[\d.]+).*?X:\s*(-?[\d.]+)\s*Y:\s*(-?[\d.]+)\s*Z:\s*(-?[\d.]+)/i);
+    if (v) {
+      this.diag.fmt = 'av1';
+      const vals = v.slice(2, 6).map(Number);
+      if (v[1] === '1') { this.pend = vals; return; }
+      if (this.pend) {
+        const a = this.pend; this.pend = null; this.both();
+        const row = [Math.round(performance.now()), 0, 0, 0, a[0], a[1], a[2], a[3], 0, 0, 0, vals[0], vals[1], vals[2], vals[3]];
+        row.legacy = true; this.onRow(row);
+      }
+      return;
+    }
     if (role === 'hc05') { if (line[0] === '#') Object.values(this.data).forEach(d => { if (d) d.msg = line; }); return; }
     const d = this.data[role]; if (!d || !line) return;
     const p = line.split(',');
@@ -157,9 +181,14 @@ const BT = {
   },
   // HC-05 (Bluetooth clásico): se empareja en el sistema y aparece como puerto serie; se lee con Web Serial (solo computador).
   async connectSerial(_role, baud = 115200) {
-    const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: baud });
+    // SPP (00001101-...) permite que Chrome/Edge muestren el HC-05 emparejado directamente en la lista.
+    let port;
+    try { port = await navigator.serial.requestPort({ allowedBluetoothServiceClassIds: ['00001101-0000-1000-8000-00805f9b34fb'] }); }
+    catch (e) { if (e.name === 'NotFoundError') throw e; port = await navigator.serial.requestPort(); }
+    try { await port.open({ baudRate: baud, bufferSize: 65536 }); }
+    catch (e) { throw new Error('el puerto está ocupado o no responde. Cierra el panel Python, el Monitor Serie de Arduino y prueba el otro COM del HC-05 (el "saliente"). Detalle: ' + (e.message || e)); }
     this.resetH();
+    this.diag = { bytes: 0, lines: 0, ok: 0, last: '', fmt: '' };
     ['muslo', 'pantorrilla'].forEach(r => { this.data[r] = { a: 1, w: 0, n: 0, pico: 0, picoW: 0, msg: '', score: newScore() }; });
     const reader = port.readable.getReader(), writer = port.writable.getWriter();
     const close = () => reader.cancel().catch(() => {});
@@ -171,10 +200,12 @@ const BT = {
       try {
         while (true) {
           const { value, done } = await reader.read(); if (done) break;
+          this.diag.bytes += value.length;
           buf += dec.decode(value, { stream: true });
-          let i; while ((i = buf.indexOf('\n')) >= 0) { this.onLine('hc05', buf.slice(0, i).trim()); buf = buf.slice(i + 1); }
+          let i; while ((i = buf.search(/[\r\n]/)) >= 0) { const ln = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (ln) this.onLine('hc05', ln); }
+          if (buf.length > 4000) buf = '';
         }
-      } catch (e) {}
+      } catch (e) { this.diag.last = 'Lectura interrumpida: ' + (e.message || e); }
       try { reader.releaseLock(); writer.releaseLock(); await port.close(); } catch (e) {}
       delete this.links.muslo; delete this.links.pantorrilla; this.data.muslo = null; this.data.pantorrilla = null; this.emit();
     })();
@@ -627,6 +658,13 @@ function PanelLive({ cb, risk, setRisk, conn, source }) {
     ${cb.err && html`<p class="text-sm text-red-400 mb-3">${cb.err}</p>`}
     ${!BT.okSerial && !BT.ok && html`<p class="text-xs text-red-400 mb-3">Este navegador no admite Bluetooth ni puerto serie. Usa Chrome o Edge.</p>`}
     <p class="text-sm mb-3 ${on ? 'or' : 'mut'}">${BT.demoTimer ? 'Mostrando datos de demostración.' : on ? 'Conectado · recibiendo datos de la rodillera.' : 'Sin conexión. Conecta la rodillera o toca “Simular datos”.'}</p>
+    ${Object.keys(BT.links).length > 0 && !BT.demoTimer && html`<div class="card rounded-md px-3 py-2 mb-3 text-xs mut" style=${{ fontFamily: 'Consolas, monospace' }}>
+      <div>Recibido: ${BT.diag.bytes} bytes · ${BT.diag.lines} líneas · ${BT.diag.ok} muestras válidas</div>
+      <div style=${{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Última línea: ${BT.diag.last || '—'}</div>
+      ${BT.diag.bytes === 0 && html`<div class="or mt-1">No llega nada todavía. Revisa que el Arduino tenga cargado Av4.ino (envía por Serial1 → HC-05) y que elegiste el COM "saliente" del HC-05.</div>`}
+      ${BT.diag.bytes > 0 && BT.diag.ok === 0 && BT.diag.lines > 5 && html`<div class="or mt-1">Llegan datos pero no en formato de 15 columnas. Si son caracteres raros, la velocidad del HC-05 no coincide con la del Arduino (configúralo a 115200 con Av3.ino: AT+UART=115200,0,0).</div>`}
+      ${BT.diag.fmt === 'av1' && html`<div class="or mt-1">Formato antiguo Av1 (2 muestras/s). Para 50 Hz carga Av4.ino.</div>`}
+    </div>`}
     <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">${kpis.map(([t, v]) => html`<div key=${t} class="card rounded-xl p-3"><p class="text-xs mut">${t}</p><p class="serif text-2xl">${v}</p></div>`)}</div>
     <div class="grid lg:grid-cols-3 gap-4">
       <div class="card rounded-xl p-3 lg:col-span-2"><canvas ref=${c1} style=${{ width: '100%', height: '230px', display: 'block' }}></canvas><canvas ref=${c2} style=${{ width: '100%', height: '200px', display: 'block' }}></canvas><p class="text-xs mut text-center">Tiempo desde la primera muestra (s)</p></div>
